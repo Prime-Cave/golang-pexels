@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 const (
@@ -47,6 +49,13 @@ type Photo struct {
 	Src             PhotoSource `json:"src"`
 }
 
+type CuratedResult struct {
+	Page     int32   `json:"page"`
+	PerPage  int32   `json:"per_page"`
+	NextPage string  `json:"next_page"`
+	Photos   []Photo `json:"photos"`
+}
+
 type PhotoSource struct {
 	Original  string `json:"original"`
 	Large     string `json:"large"`
@@ -57,6 +66,26 @@ type PhotoSource struct {
 	Square    string `json:"square"`
 	Landscape string `json:"landscape"`
 	Tiny      string `json:"tiny"`
+}
+
+type VideoSearchResult struct {
+	 
+}
+
+type Video struct{
+
+}
+
+type PopularVideos struct {
+
+}
+
+type VideoFiles struct{
+
+}
+
+type VideoPictures struct {
+
 }
 
 func (c *Client) SearchPhotos(query string, perPage, page int) (*SearchResult, error) {
@@ -77,17 +106,17 @@ func (c *Client) SearchPhotos(query string, perPage, page int) (*SearchResult, e
 	return &result, err
 }
 
-func (c *Client) CuratedPhotos(perPage, page int)(*CuratedResult, error){
+func (c *Client) CuratedPhotos(perPage, page int) (*CuratedResult, error) {
 	url := fmt.Sprintf(PhotoApi+"/curated?per_page=%d&page=%d", perPage, page)
 	res, err := c.requestDoWithAuth("GET", url)
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
 
 	defer res.Body.Close()
 
-	data, err:= io.ReadAll(res.Body)
-	if err != nil{
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
 		return nil, err
 	}
 	var result CuratedResult
@@ -95,7 +124,7 @@ func (c *Client) CuratedPhotos(perPage, page int)(*CuratedResult, error){
 	return &result, err
 }
 
-func (c *Client) requestDoWithAuth(method, url string) (*http.Response, error){
+func (c *Client) requestDoWithAuth(method, url string) (*http.Response, error) {
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, err
@@ -106,12 +135,50 @@ func (c *Client) requestDoWithAuth(method, url string) (*http.Response, error){
 		return res, err
 	}
 	times, err := strconv.Atoi(res.Header.Get("X-Ratelimit-Remaining"))
-	if err != nil{
+	if err != nil {
 		return res, nil
 	} else {
 		c.RemainingTimes = int32(times)
 	}
 	return res, nil
+}
+
+func (c *Client) GetPhoto(id int32) (*Photo, error) {
+	url := fmt.Sprintf(PhotoApi+"/photos/%d", id)
+	res, err := c.requestDoWithAuth("GET", url)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	var result Photo
+	err = json.Unmarshal(data, &result)
+	return &result, err
+}
+
+func (c *Client) GetRandomPhoto() (*Photo, error) {
+	rand.NewSource(time.Now().Unix())
+	randNum := rand.Intn(1001)
+	result, err := c.CuratedPhotos(1, randNum)
+	if err == nil && len(result.Photos) == 1 {
+		return &result.Photos[0], nil
+	}
+	return nil, err
+}
+
+func (c *Client) SearchVideo(query, perPage, page int) (*VideoSearchResult, error) {
+
+}
+
+func (c *Client) PopularVideo(perPage, page int) (*PopularVideos, error) {
+
+}
+
+func (c *Client) GetRandomVideo() (*Video, error) {
+
 }
 
 func main() {
